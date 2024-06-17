@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>D3 Visualization</title>
+    <!-- Load D3.js from CDN -->
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            color: hsl(0, 0%, 87%);
+            /* Dark gray for text */
+        }
+
+        #link-info-box {
+            position: absolute;
+            background-color: #eeeded;
+            /* White background */
+            padding: 10px;
+            border: 2px solid #dadada;
+            /* Solid orange border */
+            border-radius: 8px;
+            /* Rounded corners for a modern look */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            /* Soft shadow for depth */
+            width: 200px;
+            /* Adjust as needed */
+            z-index: 10;
+            display: none;
+            /* Initially hidden */
+            font-size: 12px;
+            transform: translate(-50%, -50%);
+            color: #ff9a03;
+
+        }
+
+        #link-info-box div {
+            margin-bottom: 10px;
+            color: #5a5a5a;
+            /* Dark gray for text */
+        }
+
+        #link-info-box div span {
+            color: #ff9a03;
+            /* Orange for highlight */
+        }
+
+        #profile-box {
+            position: absolute;
+            background-color: #eeeded;
+            /* White background */
+            /* Orange border */
+            padding: 10px;
+            border: 2px solid #dadada;
+            /* Solid orange border */
+            border-radius: 8px;
+            /* Rounded corners for a modern look */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            /* Soft shadow for depth */
+            width: 150px;
+            /* Adjust as needed */
+            z-index: 10;
+            display: none;
+            /* Initially hidden */
+            font-size: 12px;
+            transform: translate(-50%, -50%);
+
+        }
+
+        #profile-box div {
+            margin-bottom: 10px;
+            color: #5a5a5a;
+            /* Dark gray for text */
+        }
+
+        #profile-box div span {
+            color: #ff9a03;
+            /* Orange for highlight */
+        }
+
+        .nodes circle {
+            fill: #808080;
+            /* Gray nodes */
+        }
+
+        .links line {
+            stroke: #d3d3d3;
+            /* Light gray links */
+        }
+
+
+
+
+        /* Add more styling as needed */
+    </style>
+</head>
+
+<body>
+    <svg width="960" height="600"></svg>
+    <div id="profile-box" style="display: none;">
+        <!-- <div id="profile-name">Name: <span></span></div> -->
+        <div id="profile-id">ID: <span></span></div>
+        <!-- <div id="profile-rating">Rating: <span></span></div> -->
+        <!-- <div id="profile-games">Games Played: <span></span></div> -->
+        <!-- Add more elements as needed -->
+    </div>
+    <div id="link-info-box" style="display: none;">
+        <!-- Display link information here -->
+        <div id="link-info">Link Info: <span></span></div>
+
+
+    </div>
+    <script>
+        var simulation;
+
+        // Define dragstarted, dragged, and dragended functions here
+
+
+        d3.json("graph2.json").then(function (graph) {
+            console.log(graph);
+
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+
+            var svg = d3.select("svg"),
+                width = +svg.attr("width"),
+                height = +svg.attr("height");
+
+            // Define the simulation with forces
+            simulation = d3.forceSimulation(graph.nodes)
+                .force("link", d3.forceLink(graph.links).id(d => d.id))
+                .force("charge", d3.forceManyBody())
+                .force("center", d3.forceCenter(width / 2, height / 2));
+
+            // Create the link lines.
+            var link = svg.append("g")
+                .attr("class", "links")
+                .selectAll("line")
+                .data(graph.links)
+                .enter().append("line")
+                .attr("stroke-width", 2)
+                .attr("stroke", "gray") // Adjust stroke color as needed
+                .on('click', function (event, d) {
+                    // 'd' contains the data for the clicked link
+                    var linkInfo = `Event: ${d.Event}, Site: ${d.Site}, Date: ${d.Date}, Round: ${d.Round}, Result: ${d.Result}, ECO: ${d.ECO}, Source: ${d.source}, Target: ${d.target}`;
+                    // the commas in linkInfo should be line breaks
+                    linkInfo = linkInfo.replace(/,/g, "<br>");
+
+
+                    var profileBox = document.getElementById("profile-box");
+                    profileBox.style.display = "none";
+                    var linkInfoBox = document.getElementById("link-info-box");
+                    linkInfoBox.style.display = "block";
+                    linkInfoBox.style.left = (event.pageX + 200) + "px";
+                    linkInfoBox.style.top = (event.pageY + 20) + "px";
+                    // Display this information in a link info box
+                    // Assuming there's an HTML element with the ID 'link-info-box' for displaying the link information
+                    d3.select('#link-info-box').html(linkInfo).style('display', 'block');
+                }); // Adjust stroke-width as needed
+
+            // Create the node circles.
+            var node = svg.append("g")
+                .attr("class", "nodes")
+                .selectAll("circle")
+                .data(graph.nodes)
+                .enter().append("circle")
+                .attr("r", 4) // Adjust radius as needed
+                .attr("fill", "gray") // Adjust fill color as needed
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended))
+                .on("click", function (event, d) {
+                    // Display the node's name in the 'node-name' div
+                    // document.getElementById("profile-name").querySelector("span").innerText = d.name;
+                    document.getElementById("profile-id").querySelector("span").innerText = d.id;
+                    var linkInfoBox = document.getElementById("link-info-box");
+                    linkInfoBox.style.display = "none";
+
+                    var profileBox = document.getElementById("profile-box");
+                    profileBox.style.display = "block";
+                    profileBox.style.left = (event.pageX + 200) + "px";
+                    profileBox.style.top = (event.pageY + 20) + "px";
+                    console.log(d.id);
+                    // document.getElementById("profile-rating").querySelector("span").innerText = d.rating;
+                    // document.getElementById("profile-games").querySelector("span").innerText = d.gamesPlayed;
+                });
+
+            // var circles = node.append("circle")
+            //     .attr("r", 3)
+            //     .call(d3.drag()
+            //         .on("start", dragstarted)
+            //         .on("drag", dragged)
+            //         .on("end", dragended));
+
+            // Update positions on each tick
+            simulation.on("tick", function () {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+
+                node
+                    .attr("cx", d => d.x)
+                    .attr("cy", d => d.y);
+            });
+        });
+
+
+    </script>
+</body>
+
+</html>
